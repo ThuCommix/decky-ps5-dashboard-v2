@@ -93,6 +93,29 @@ LowerRows                   ← Favorites / Installed / Shortcuts; further press
   stayed dead even after a reboot. That's why the prop is conditional **and** `.psd-content` is keyed
   on the flag: flipping the setting rebuilds the node, so Steam re-reads it in both directions (the
   focus-restore effect depends on `hideTopBar` for that reason — the remount drops the focus).
+- **The bar's items are hidden on our screens, not just its status icons.** Swallowing the up-press
+  doesn't cover every path back to the bar (Steam re-focuses it after some pages, **waking from
+  sleep**, a notification), and then its global search and notification buttons were left showing
+  while the clock and WiFi/battery/avatar — which are hidden by an *unscoped* rule — stayed hidden.
+  So theme.ts hides, under `html:has(.psd-root)`: `headerAll` (every class the header module
+  exports, not the icons by name — the bar is built from that module, so its buttons go whatever
+  Steam calls them), plus `[class*="HeaderItem"|"Search"|"NotificationIcon"]` fallbacks for when the
+  module doesn't resolve. Two traps are baked in: (1) the scope must be `:has(.psd-root)`, **not** a
+  marker class on `<html>` — Steam rewrites the root's classes (on wake from sleep among others),
+  which wiped our `psd-shell` marker and brought exactly those two icons back while everything
+  global kept working; `:has()` is evaluated live and can't be lost. (2) `:not(:has(.psd-root))`
+  stays on each selector so that if a header class ever lands on a wrapper containing our root, our
+  own screen can't be hidden. Don't add a blanket `[class*="Notif"]`: Steam's notification *toasts*
+  carry that in their class and must keep showing.
+- **Steam's clock format lives in its *friend* settings.** `useSteamClockFormat()` reads
+  `settingsStore.m_FriendSettings.Value.b24HourClock` — found with a snapshot/diff of the client's
+  settings surfaces, because nothing in `settingsStore` matches `/clock/` by name, `GetClientSettings`
+  doesn't exist, and `GetAccountSettings` isn't where it lands. It also mirrors Steam's own clock text
+  (`header.Clock`; digits + separator only = 24-hour, any marker = 12-hour) as an authoritative
+  fallback that survives the setting moving again, plus the account-settings APIs and both change
+  events, all re-checked every 2 s while visible — the setting is changed from Steam's own UI while
+  the PS5 screens stay mounted, so nothing remounts to re-read it. Any new reader of a Steam client
+  setting should assume the same: find it by diffing, don't trust the name, and keep a poll.
 - **Settings are read in render, not on demand.** `currentSettings()` is live for an event handler,
   but anything a screen decides while rendering (which handlers it gives Steam's focus nodes, what
   it passes down) is frozen until the next render. `useSettings()` (`hooks/useSettings.ts`,
@@ -189,5 +212,9 @@ space. Hiding the bar in CSS was tried and does *not* work (the search UI isn't 
 `DashboardBar` element), and a handler that stays mounted keeps its first callback from Steam's focus
 node — so the handler is attached only while the setting is on and `.psd-content` is keyed on it,
 which rebuilds the node when the setting flips. `useSettings()` makes the flip land immediately.
-Not verified on a device yet: check both states of the setting after a reboot (on → up does
-nothing; off → up brings Steam's bar back).
+Because the bar still turns up in a few cases, every class of the header module is hidden under
+`html:has(.psd-root)` — `:has()` and not a marker class on `<html>`, because Steam rewrites the
+root's classes on wake from sleep, which wiped the marker and brought exactly the search and
+notification icons back. Not verified on a device yet: check both states of the setting after a
+reboot (on → up does nothing; off → up brings Steam's bar back), and that the search and
+notification icons stay hidden after a sleep/wake cycle.

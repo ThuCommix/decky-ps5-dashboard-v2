@@ -158,6 +158,28 @@ ${header.HeaderOpaque} {
 ${r.topStatus},
 ${header.Clock} {
   display: none !important;
+}
+/*
+ * The bar still turns up now and then (Steam focusing it again after a page returns, on wake from
+ * sleep, a notification arriving), and its search and notification buttons were left over while the
+ * clock and status icons were already hidden — those two are hidden here, the status icons globally
+ * above. Two things learned the hard way:
+ *  - the scope is html:has(.psd-root), not a class we put on the html element: Steam rewrites the
+ *    root's classes (on wake from sleep among others), which wiped our marker and brought the bar's
+ *    buttons back while everything global kept working. :has() is evaluated live, nothing to lose.
+ *  - it hides *every* class the header module exports, not the icons by name: the bar is built from
+ *    that module, so its search/notification buttons go whatever they're called, and Steam can rename
+ *    them without this breaking. The by-name selectors are only fallbacks for an unresolved module.
+ * It's scoped to our screens because on Steam's own pages the bar is the only search; our own classes
+ * are all psd-*, so nothing of ours can be caught. The :not(:has(.psd-root)) guard is a safety net: if
+ * one of the module's classes ever ends up on a wrapper that contains our root, our own screen would
+ * never be hidden by it.
+ */
+html:has(.psd-root) ${r.headerAll}:not(:has(.psd-root)),
+html:has(.psd-root) [class*="HeaderItem"]:not(:has(.psd-root)),
+html:has(.psd-root) [class*="Search"]:not(:has(.psd-root)),
+html:has(.psd-root) [class*="NotificationIcon"]:not(:has(.psd-root)) {
+  display: none !important;
 }`);
   }
 

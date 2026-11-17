@@ -43,6 +43,8 @@ export interface ResolvedClasses {
   missing: ModuleName[];
   /** The native top bar's status icons (WiFi, battery, avatar) as one selector, or an inert one when none is found. */
   topStatus: string;
+  /** Every class of the native top bar module — what the whole bar is built from — or an inert selector. */
+  headerAll: string;
 }
 
 /** Key names of the native top bar's status icons. Their hashed classes change with every client update,
@@ -78,6 +80,9 @@ export function resolveClasses(rescan = false): ResolvedClasses {
   // The native top bar's status icons (WiFi, battery, avatar): their key names are stable, the hashes aren't,
   // so the selector is scanned out of the header module at runtime. Inert until something matches.
   let topStatus = MISSING;
+  // And the whole module, every class it exports: on the PS5 screens the bar goes entirely, and this way its
+  // search/notification buttons are covered whatever they're called instead of one guessed name at a time.
+  let headerAll = MISSING;
   for (const [name, keys] of Object.entries(MODULE_KEYS) as [ModuleName, readonly string[]][]) {
     // Every copy of the module, not just the first: Steam bundles the same component more than once
     // and Game Mode doesn't always use the copy that comes first.
@@ -96,15 +101,21 @@ export function resolveClasses(rescan = false): ResolvedClasses {
       // Every hash in the header module whose key looks like a status icon. The clock is excluded on purpose:
       // it's a known stable key, so it's hidden via `header.Clock` instead of the scan.
       const hashes = new Set<string>();
+      const all = new Set<string>();
       for (const m of found) {
-        for (const key of Object.keys(m)) {
-          if (TOP_STATUS_KEY.test(key)) hashes.add(m[key]);
+        for (const [key, value] of Object.entries(m)) {
+          if (typeof value !== "string") continue;
+          all.add(value);
+          if (TOP_STATUS_KEY.test(key)) hashes.add(value);
         }
       }
       if (hashes.size > 0) {
         topStatus = `:is(${[...hashes].map((h) => `.${CSS.escape(h)}`).join(", ")})`;
       }
+      if (all.size > 0) {
+        headerAll = `:is(${[...all].map((h) => `.${CSS.escape(h)}`).join(", ")})`;
+      }
     }
   }
-  return { sel, missing, topStatus };
+  return { sel, missing, topStatus, headerAll };
 }

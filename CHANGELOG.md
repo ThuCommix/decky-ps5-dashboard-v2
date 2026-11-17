@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.12.1
+
+- **No leftovers when the bar does turn up.** Steam still re-opens its bar in a few cases (coming back from one of
+  its own pages, waking from sleep, a notification arriving), and its global search and notification buttons used
+  to stay visible there while the clock and status icons were already hidden. The whole bar is hidden on the PS5
+  screens now, whatever the buttons are called; Steam's own pages and its notification pop-ups are untouched.
+- **The clock follows Steam's 12/24-hour setting again.** Steam keeps that format in its *friend* settings, not
+  under the clock settings the plugin was reading, so switching it left the clock on the old format until the
+  plugin reloaded. It's read from there now, mirrored from Steam's own clock as a backstop, and re-checked every
+  couple of seconds — it flips within a moment of the change.
+
 ## 1.12.0
 
 - **Steam's own top bar is kept off the PS5 screens.** Pressing up from the top row no longer slides Steam's bar in
